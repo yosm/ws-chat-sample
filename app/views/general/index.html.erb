@@ -1,8 +1,9 @@
 <% javascript "pages/general" %>
 
 <% if current_user %>
-<div>
-  <%= text_field_tag :chat %><%= submit_tag "send", id: :chat_button %>
+<div class="well form-inline">
+  <%= text_field_tag :chat, nil, class: "input-large" %>
+  <%= button_tag "send", id: :chat_button, class: "btn" %>
 </div>
 
 <div id="msg"></div>
