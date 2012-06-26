@@ -1,0 +1,10 @@
+default:
+  product_name: チャットサンプル
+  twitter_key: your key
+  twitter_secret: your secret
+
+development:
+  game_host: localhost:8080
+
+production:
+  game_host: localhost:8080

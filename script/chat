@@ -1,0 +1,65 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+
+APP_PATH = File.expand_path('../../config/application',  __FILE__)
+require File.expand_path('../../config/boot',  __FILE__)
+require APP_PATH
+
+
+
+require 'optparse'
+opt = OptionParser.new
+pidfile = nil
+port    = 8080
+opt.on('-p VAL') {|v| pidfile = v }
+opt.on('--port PORT') {|v| port = v }
+opt.parse!(ARGV)
+daemon_mode = false
+
+if pidfile
+  Process.daemon
+  File.open(pidfile, "w") do |f|
+    f.write Process.pid
+  end
+  daemon_mode = true
+  Rails.env = "production"
+end
+
+Rails.application.require_environment!
+
+@log = Logger.new(File.join(Rails.root, "log", "socket.log"))
+
+EM.run do
+  puts "server start"
+
+  EM::WebSocket.start(:host => "0.0.0.0", :port => port, :debug => !daemon_mode) do |ws|
+    ws.onopen{
+      session = nil
+      ws.request["cookie"].split.each do |str|
+        kv = str.split("=", 2)
+        if kv.first == Rails.configuration.session_options[:key]
+          session = Rails.configuration.session_options[:coder].decode(kv.last)
+        end
+      end
+
+      if session["user_id"] && user = User.find(session["user_id"])
+      else
+        ws.trigger_on_close
+      end
+    }
+
+    ws.onclose{
+      if ws
+        puts "close"
+      end
+    }
+
+    ws.onerror{|e|
+      @log.error e.to_s + e.backtrace.join("\n")
+      puts e.backtrace
+    }
+
+    ws.onmessage{|msg|
+    }
+  end
+end
