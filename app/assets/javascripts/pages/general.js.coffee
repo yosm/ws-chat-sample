@@ -1,27 +1,28 @@
 ws = null
 
 $(document).ready ->
-  $('#chat').click(send)
   connect()
+  $('#chat_button').click(send)
 
 connect = ->
   return if ws
   ws = new WebSocket("ws://localhost:8080")
   ws.onmessage = (msg) ->
-    trace(msg)
+    json = $.parseJSON(msg.data)
+    trace(json)
   ws.onclose = ->
     ws = null
     log("ws closed")
   ws.onopen = ->
     log('ws connected')
 
-
 log = (message) ->
   trace("[log] " + message)
 
 trace = (message) ->
   mes_div = $('<div />').html(message)
-  $('div#chat').prepend(mes_div)
+  $('div#msg').prepend(mes_div)
 
-send = (message) ->
-  ws.send(message)
+send = ->
+  ws.send($('#chat')[0].value)
+  $('#chat')[0].value = ""

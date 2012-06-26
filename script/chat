@@ -5,34 +5,16 @@ APP_PATH = File.expand_path('../../config/application',  __FILE__)
 require File.expand_path('../../config/boot',  __FILE__)
 require APP_PATH
 
-
-
-require 'optparse'
-opt = OptionParser.new
-pidfile = nil
-port    = 8080
-opt.on('-p VAL') {|v| pidfile = v }
-opt.on('--port PORT') {|v| port = v }
-opt.parse!(ARGV)
-daemon_mode = false
-
-if pidfile
-  Process.daemon
-  File.open(pidfile, "w") do |f|
-    f.write Process.pid
-  end
-  daemon_mode = true
-  Rails.env = "production"
-end
-
 Rails.application.require_environment!
 
+@users = {}
 @log = Logger.new(File.join(Rails.root, "log", "socket.log"))
+@channel = EM::Channel.new
 
 EM.run do
   puts "server start"
 
-  EM::WebSocket.start(:host => "0.0.0.0", :port => port, :debug => !daemon_mode) do |ws|
+  EM::WebSocket.start(host: "0.0.0.0", port: 8080, debug: true) do |ws|
     ws.onopen{
       session = nil
       ws.request["cookie"].split.each do |str|
@@ -43,23 +25,32 @@ EM.run do
       end
 
       if session["user_id"] && user = User.find(session["user_id"])
+        sid = @channel.subscribe{|mes|
+          ws.send(mes)
+        }
+        @users[ws.signature] = user
+        @channel.push("#{user.name}さんが入室しました。".to_json)
       else
         ws.trigger_on_close
       end
-    }
 
-    ws.onclose{
-      if ws
-        puts "close"
-      end
-    }
-
-    ws.onerror{|e|
-      @log.error e.to_s + e.backtrace.join("\n")
-      puts e.backtrace
-    }
-
-    ws.onmessage{|msg|
+      ws.onclose{
+        if ws
+          current_user = @users.delete(ws.signature)
+          @channel.unsubscribe(sid)
+          @channel.push("#{current_user.name}さんが退室しました。".to_json)
+        end
+      }
+      
+      ws.onerror{|e|
+        @log.error e.to_s + e.backtrace.join("\n")
+        puts e.backtrace
+      }
+      
+      ws.onmessage{|msg|
+        current_user = @users[ws.signature]
+        @channel.push("#{current_user.name} : #{msg}".to_json)
+      }
     }
   end
 end

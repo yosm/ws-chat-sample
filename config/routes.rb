@@ -3,8 +3,6 @@ Chat::Application.routes.draw do
 
   root to: "general#index"
 
-  match '/auth/:provider/callback', to: 'sessions#callback'
-  match '/auth/failure', to: "sessions#failure"
-  match '/signin(/:provider)' => 'sessions#new', :as => :signin
+  match "/auth/:provider/callback" => "sessions#callback"
   match '/signout' => 'sessions#destroy', :as => :signout
 end
