@@ -1,5 +1,8 @@
 = ws-chat-sample
 
+== 事前準備
+config/railstar.yml.exampleをconfig/railstar.ymlに変更し、twitterのkeyとsecretを記載してください
+
 == サーバ起動方法
 
   $ rails s
