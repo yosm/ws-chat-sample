@@ -24,7 +24,7 @@ EM.run do
         end
       end
 
-      if session["user_id"] && user = User.find(session["user_id"])
+      if session && session["user_id"] && user = User.find(session["user_id"])
         sid = @channel.subscribe{|mes|
           ws.send(mes)
         }
